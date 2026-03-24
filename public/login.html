@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - CareGuide</title>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: #f3f3f3;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .login-card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="login-card">
+  <h4 class="mb-3">CareGuide Assistant</h4>
+  <p class="text-muted">Sign in to continue</p>
+
+  <button class="btn btn-primary login-btn" onclick="loginWithGoogle()">
+    Sign in with Google
+  </button>
+</div>
+
+<script>
+
+    const firebaseConfig = {
+    apiKey: "AIzaSyBkcFma_F3MqKqNgmRyj9k_XO0XLAmL60o",
+    authDomain: "ai-humanity-g3.firebaseapp.com",
+    projectId: "ai-humanity-g3",
+    storageBucket: "ai-humanity-g3.firebasestorage.app",
+    messagingSenderId: "42108703629",
+    appId: "1:42108703629:web:ac1f6113b086fc316ba3c4",
+    measurementId: "G-ZHEYJ9QMG5"
+    };
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  // Redirect if already logged in
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      window.location.href = "login.html";
+    }
+  });
+
+  // Google Login
+  function loginWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    auth.signInWithPopup(provider)
+      .then(() => {
+        window.location.href = "index.html";
+      })
+      .catch(err => {
+        alert("Login failed: " + err.message);
+      });
+  }
+</script>
+
+</body>
+</html>
