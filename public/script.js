@@ -55,6 +55,8 @@ function loadLastChat() {
     chatHistory = [...allChats[0].messages];
   } else chatHistory = [];
   refreshChatUI();
+  setTimeout(() => {
+    document.getElementById("user-input").disabled = false; },150);
 }
 
 function saveCurrentChat() {

@@ -4,10 +4,6 @@ const cors = require("cors")({ origin: true });
 
 const { SessionsClient } = require("@google-cloud/dialogflow-cx");
 
-process.env.GOOGLE_APPLICATION_CREDENTIALS = path.join(
-  __dirname,
-  "service-account.json"
-);
 
 exports.chatbot = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
