@@ -19,6 +19,7 @@ let currentChipsContainer = null;
 let chatHistory = [];
 let allChats = JSON.parse(localStorage.getItem("allChats")) || [];
 let currentChatId = null;
+let lastShownDate = null;
 
 // ========================== INIT
 document.addEventListener("DOMContentLoaded", () => {
@@ -75,6 +76,7 @@ function newChat() {
   chatHistory = [];
   currentChatId = null;
   localStorage.removeItem("dialogflowSessionId");
+  lastShownDate = null;
   refreshChatUI();
 }
 
@@ -84,43 +86,37 @@ function loadChat(chatId) {
   if (chat) {
     currentChatId = chat.id;
     chatHistory = [...chat.messages];
+    lastShownDate = null;
     refreshChatUI();
   }
 }
+
 function renderHistoryButtons() {
   const list = document.getElementById("history-list");
   const sidebar = document.getElementById("sidebar");
   if (!list || !sidebar) return;
 
   list.innerHTML = "";
-
-  if (sidebar.classList.contains("collapsed")) {
-    return;
-  }
+  if (sidebar.classList.contains("collapsed")) return;
 
   allChats.forEach((chat) => {
-    // ✅ CHANGE: Use DIV instead of BUTTON — fixes space forever
     const item = document.createElement("div");
     item.className = `chat-history-btn ${currentChatId === chat.id ? "active" : ""}`;
-    item.style.cursor = "pointer";
 
-    // Title
     const titleSpan = document.createElement("span");
     titleSpan.className = "chat-title-text";
     titleSpan.textContent = chat.title;
     titleSpan.title = chat.title;
 
-    // Icons
     const actions = document.createElement("div");
-    actions.className = "d-flex gap-2";
+    actions.className = "d-flex gap-2 flex-shrink-0";
 
-    // EDIT ICON
+    // Edit - 修复：支持输入空格、回车/失焦保存
     const edit = document.createElement("i");
     edit.className = "bi bi-pencil";
     edit.style.fontSize = "11px";
     edit.onclick = (e) => {
       e.stopPropagation();
-
       const input = document.createElement("input");
       input.value = chat.title;
       input.style.fontSize = "12px";
@@ -128,43 +124,42 @@ function renderHistoryButtons() {
       input.style.width = "90px";
       input.style.borderRadius = "4px";
       input.style.border = "1px solid #ccc";
-
+      // 允许输入空格，取消文本修剪限制
+      input.style.whiteSpace = "pre-wrap";
       item.innerHTML = "";
       item.appendChild(input);
       input.focus();
-
+      input.select(); // 选中原有内容，方便直接修改
+      
       const saveTitle = () => {
-        let final = input.value.trim();
-        if (final.split(" ").length > 5) {
-          final = final.split(" ").slice(0, 5).join(" ");
-        }
-        chat.title = final || chat.title;
+        // 保留输入的所有内容（包括空格），仅空值时保留原标题
+        let final = input.value;
+        chat.title = final.trim() === "" ? chat.title : final;
         localStorage.setItem("allChats", JSON.stringify(allChats));
         renderHistoryButtons();
       };
-
+      
+      // 回车保存：阻止默认换行，避免输入框错位
       input.onkeydown = (e) => {
-        if (e.key === "Enter") saveTitle();
+        if (e.key === "Enter") {
+          e.preventDefault();
+          saveTitle();
+        }
       };
+      // 失焦保存：点击其他地方自动保存
       input.onblur = saveTitle;
     };
 
-    // DELETE ICON
+    // Delete
     const del = document.createElement("i");
     del.className = "bi bi-trash";
     del.style.fontSize = "11px";
     del.onclick = (e) => {
       e.stopPropagation();
       if (!confirm("Delete this chat?")) return;
-
       allChats = allChats.filter(c => c.id !== chat.id);
       localStorage.setItem("allChats", JSON.stringify(allChats));
-
-      if (currentChatId === chat.id) {
-        chatHistory = [];
-        currentChatId = null;
-        refreshChatUI();
-      }
+      if (currentChatId === chat.id) { chatHistory = []; currentChatId = null; refreshChatUI(); }
       renderHistoryButtons();
     };
 
@@ -179,7 +174,8 @@ function refreshChatUI() {
   const chatBox = document.getElementById("chat-box");
   chatBox.innerHTML = "";
   removeChips();
-  chatHistory.forEach(msg => addMessage(msg.text, msg.sender));
+  lastShownDate = null;
+  chatHistory.forEach(msg => addMessage(msg.text, msg.sender, msg.timestamp));
   renderHistoryButtons();
   scrollToBottom();
 }
@@ -194,7 +190,7 @@ function addTyping() {
   img.className = "avatar";
   const bubble = document.createElement("div");
   bubble.className = "bot-bubble";
-  bubble.innerHTML = `<span></span><span></span><span></span>`;
+  bubble.innerHTML = ``;
   wrap.appendChild(img);
   wrap.appendChild(bubble);
   document.getElementById("chat-box").appendChild(wrap);
@@ -211,8 +207,9 @@ async function sendMessage(textOverride = null) {
   const text = textOverride || input.value.trim();
   if (!text) return;
 
-  addMessage(text, "user");
-  chatHistory.push({ sender: "user", text });
+  const timestamp = new Date().toISOString();
+  addMessage(text, "user", timestamp);
+  chatHistory.push({ sender: "user", text, timestamp });
   saveCurrentChat();
   input.value = "";
   removeChips();
@@ -233,13 +230,42 @@ async function sendMessage(textOverride = null) {
     const reply = data.reply || data.fulfillmentText || data.text || "";
 
     if (reply.trim()) {
-      addMessage(reply, "bot");
-      chatHistory.push({ sender: "bot", text: reply });
+      const botTimestamp = new Date().toISOString();
+      addMessage(reply, "bot", botTimestamp);
+      chatHistory.push({ sender: "bot", text: reply, timestamp: botTimestamp });
       saveCurrentChat();
     }
-    if (data.chips?.length) addChips(data.chips);
+
+    // 仅修改此处芯片解析逻辑，彻底解决[object Object]问题
+    let chips = [];
+    // 严格适配API返回的richContent格式（[{options: [{text: "..."}], type: "chips"}]）
+    if (data.richContent && Array.isArray(data.richContent) && data.richContent.length > 0) {
+      // 遍历richContent每一行，找到type为chips的项
+      data.richContent.forEach(row => {
+        if (Array.isArray(row)) {
+          row.forEach(item => {
+            // 确保item是对象、有type和options，且options是数组
+            if (typeof item === "object" && item.type === "chips" && Array.isArray(item.options)) {
+              // 只提取options中的text，过滤非字符串项
+              chips = item.options.map(opt => {
+                return typeof opt === "object" && opt.text ? opt.text.trim() : "";
+              }).filter(text => text); // 过滤空字符串，避免无效芯片
+            }
+          });
+        }
+      });
+    } else if (data.chips && Array.isArray(data.chips)) {
+      // 兼容旧的chips格式，防止解析异常
+      chips = data.chips.map(chip => {
+        return typeof chip === "object" ? (chip.text || "") : chip.toString().trim();
+      }).filter(text => text);
+    }
+    // 只有芯片数组有有效内容时才渲染
+    if (chips.length) addChips(chips);
+
   } catch (err) {
     removeTyping();
+    console.error(err);
   }
 }
 
@@ -249,9 +275,27 @@ function generateSessionId() {
   return id;
 }
 
-// ========================== ADD MESSAGE
-function addMessage(text, sender) {
+// ========================== ADD MESSAGE + DATE TIME (ISSUE #3)
+function addMessage(text, sender, timestamp) {
   const chatBox = document.getElementById("chat-box");
+
+  // Show date separator once per day
+  if (timestamp) {
+    const date = new Date(timestamp);
+    const dateStr = date.toLocaleDateString();
+    if (dateStr !== lastShownDate) {
+      lastShownDate = dateStr;
+      const sep = document.createElement("div");
+      sep.className = "chat-date-separator";
+      const timeStr = date.toLocaleString("en-SG", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+      sep.innerHTML = `${timeStr}`;
+      chatBox.appendChild(sep);
+    }
+  }
+
   if (sender === "bot") {
     const wrapper = document.createElement("div");
     wrapper.className = "bot-message-wrapper";
@@ -273,16 +317,19 @@ function addMessage(text, sender) {
   scrollToBottom();
 }
 
-// ========================== CHIPS
+// ========================== CHIPS（仅优化渲染逻辑，避免异常）
 function addChips(chips) {
   removeChips();
   const container = document.createElement("div");
   container.className = "chips";
+  // 遍历芯片数组，确保只渲染有效文本
   chips.forEach(text => {
-    const btn = document.createElement("button");
-    btn.textContent = text;
-    btn.onclick = () => sendMessage(text);
-    container.appendChild(btn);
+    if (text && typeof text === "string") {
+      const btn = document.createElement("button");
+      btn.textContent = text;
+      btn.onclick = () => sendMessage(text);
+      container.appendChild(btn);
+    }
   });
   currentChipsContainer = container;
   document.getElementById("chat-box").appendChild(container);
@@ -296,7 +343,7 @@ function removeChips() {
   }
 }
 
-// ========================== AUTO SCROLL TO BOTTOM (PERFECT)
+// ========================== AUTO SCROLL
 function scrollToBottom() {
   const box = document.getElementById("chat-box");
   setTimeout(() => {
@@ -304,40 +351,61 @@ function scrollToBottom() {
   }, 10);
 }
 
-// ========================== CHIP EVENT HANDLER 
+// ========================== CHIP EVENT（同步优化芯片解析）
 async function sendChipEvent(chip) {
-  // If the chip has an event, trigger it in Dialogflow
   if (chip.event) {
-    addMessage(chip.text, "user"); // Show chip text as user message
-    chatHistory.push({ sender: "user", text: chip.text });
+    // 确保chip.text是有效字符串
+    const chipText = typeof chip === "object" && chip.text ? chip.text.trim() : "";
+    if (!chipText) return;
+    
+    const timestamp = new Date().toISOString();
+    addMessage(chipText, "user", timestamp);
+    chatHistory.push({ sender: "user", text: chipText, timestamp });
     saveCurrentChat();
     removeChips();
     addTyping();
 
     try {
-      // Call API with EVENT instead of plain text
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          event: chip.event, // SEND THE EVENT TO DIALOGFLOW
+          event: chip.event,
           sessionId: localStorage.getItem("dialogflowSessionId") || generateSessionId()
         })
       });
-
       const data = await res.json();
       removeTyping();
       const reply = data.reply || data.fulfillmentText || data.text || "";
-
       if (reply.trim()) {
-        addMessage(reply, "bot");
-        chatHistory.push({ sender: "bot", text: reply });
+        const botTs = new Date().toISOString();
+        addMessage(reply, "bot", botTs);
+        chatHistory.push({ sender: "bot", text: reply, timestamp: botTs });
         saveCurrentChat();
       }
-      if (data.chips?.length) addChips(data.chips);
+      // 同步优化芯片解析，与sendMessage保持一致
+      let chips = [];
+      if (data.richContent && Array.isArray(data.richContent) && data.richContent.length > 0) {
+        data.richContent.forEach(row => {
+          if (Array.isArray(row)) {
+            row.forEach(item => {
+              if (typeof item === "object" && item.type === "chips" && Array.isArray(item.options)) {
+                chips = item.options.map(opt => {
+                  return typeof opt === "object" && opt.text ? opt.text.trim() : "";
+                }).filter(text => text);
+              }
+            });
+          }
+        });
+      } else if (data.chips && Array.isArray(data.chips)) {
+        chips = data.chips.map(chipItem => {
+          return typeof chipItem === "object" ? (chipItem.text || "") : chipItem.toString().trim();
+        }).filter(text => text);
+      }
+      if (chips.length) addChips(chips);
     } catch (err) {
       removeTyping();
-      console.error("Chip event error:", err);
+      console.error(err);
     }
   }
 }

@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dementia Chatbot</title>
 
   <!-- Bootstrap -->
@@ -35,26 +36,34 @@
         <i class="bi bi-chat-dots"></i> <span class="sidebar-text small px-1">New Chat</span>
       </button>
 
-      <!-- Chat History -->
-    <div id="history-list" class="mt-2"></div>
+      <!-- Chat History (SCROLLABLE) -->
+      <div id="history-list" class="mt-2 history-scroll"></div>
+
+      <!-- IMPORTANT NOTICE -->
+      <div class="notice-small mt-3">
+        Important Reminder:<br>
+        If there is immediate severe injury or urgent health crisis: Please contact Singapore Emergency Hotline 999 / Go to the nearest hospital.<br>
+        Caregiver support & dementia official resources: <a href="https://www.dementiasociety.org.sg" target="_blank" class="notice-link">Dementia Society Singapore</a>
+      </div>
+
       <!-- Spacer -->
-    <div style="flex-grow:1;"></div>
+      <div style="flex-grow:1;"></div>
 
-    <!-- User Profile -->
-    <div id="user-profile" class="user-profile mt-auto p-2">
-    
-      <!-- Username -->
-      <div id="user-name" class="small sidebar-text text-muted fst-italic mb-2"></div>
+      <!-- User Profile -->
+      <div id="user-profile" class="user-profile mt-auto p-2">
+      
+        <!-- Username -->
+        <div id="user-name" class="small sidebar-text text-muted fst-italic mb-2"></div>
 
-      <!-- Logout Button -->
-      <button id="logout-btn" class="btn btn-light btn-sm w-100 logout-btn">
-        <i class="bi bi-box-arrow-right"></i>
-        <span class="sidebar-text small px-1">Logout</span>
-      </button>
+        <!-- Logout Button -->
+        <button id="logout-btn" class="btn btn-light btn-sm w-100 logout-btn">
+          <i class="bi bi-box-arrow-right"></i>
+          <span class="sidebar-text small px-1">Logout</span>
+        </button>
+
+      </div>
 
     </div>
-
-  </div>
 
     <!-- Chat Area -->
     <div class="d-flex flex-column chat-container">
@@ -84,6 +93,6 @@
   </div>
 </div>
 
-<script src="script.js?v=2"></script>
+<script src="script.js?v=3"></script>
 </body>
 </html>
