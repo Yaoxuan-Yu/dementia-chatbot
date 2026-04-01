@@ -39,7 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("sidebarToggle")?.addEventListener("click", () => {
-    sidebar.classList.toggle("collapsed");
+    const sidebar = document.getElementById("sidebar");
+    sidebar?.classList.toggle("collapsed");
     renderHistoryButtons();
   });
 
@@ -88,9 +89,9 @@ function newChat() {
   // 新增：延迟100ms调用triggerWelcome（确保refreshChatUI执行完成，避免DOM未渲染）
   setTimeout(async () => {
     console.log("setTimeout triggerWelcome called"); // 新增：确认延迟函数执行
-    // 捕获异常，避免影响整体流程
     await triggerWelcome().catch(err => console.error("triggerWelcome in newChat error: ", err));
   }, 100);
+
 }
 
 function loadChat(chatId) {
@@ -212,12 +213,15 @@ function addTyping() {
   img.className = "avatar";
   const bubble = document.createElement("div");
   bubble.className = "bot-bubble";
-  bubble.innerHTML = ``;
+  bubble.innerHTML = `<div class="typing">
+    <span></span><span></span><span></span>
+  </div>`;
   wrap.appendChild(img);
   wrap.appendChild(bubble);
   document.getElementById("chat-box").appendChild(wrap);
   scrollToBottom();
 }
+
 
 function removeTyping() {
   document.querySelectorAll(".typing").forEach(el => el.remove());
@@ -227,6 +231,11 @@ function removeTyping() {
 async function triggerWelcome() {
   const hiddenText = "Hi";
   try {
+    document.getElementById("user-input").disabled = true; 
+
+    removeChips();
+    addTyping();
+
     const sessionId = localStorage.getItem("dialogflowSessionId") || generateSessionId();
     const res = await fetch(API_URL, {
       method: "POST",
@@ -238,6 +247,7 @@ async function triggerWelcome() {
     });
 
     const data = await res.json();
+    removeTyping();
     const reply = data.reply || data.fulfillmentText || data.text || "";
 
     if (reply.trim()) {
@@ -267,12 +277,6 @@ async function triggerWelcome() {
     if (chips.length) {
       addChips(chips);
     }
-
-    if (!firstWelcomeReady) {
-      firstWelcomeReady = true;
-      document.getElementById("user-input").disabled = false; // 欢迎消息加载完成，启用输入框
-    }
-
   } catch (err) {
     console.error("welcome error", err);
   }
@@ -282,13 +286,15 @@ async function sendMessage(textOverride = null) {
   const input = document.getElementById("user-input");
   const text = textOverride || input.value.trim();
   if (!text) return;
-
+  
   const timestamp = new Date().toISOString();
   addMessage(text, "user", timestamp);
   chatHistory.push({ sender: "user", text, timestamp });
   saveCurrentChat();
   input.value = "";
   removeChips();
+  document.getElementById("user-input").disabled = true; 
+
   addTyping();
 
   try {
@@ -303,6 +309,8 @@ async function sendMessage(textOverride = null) {
 
     const data = await res.json();
     removeTyping();
+      document.getElementById("user-input").disabled = false; 
+
     const reply = data.reply || data.fulfillmentText || data.text || "";
 
     if (reply.trim()) {
@@ -444,6 +452,7 @@ function addChips(chips) {
   currentChipsContainer = container;
   document.getElementById("chat-box").appendChild(container);
   scrollToBottom();
+  syncInputWithChips();
 }
 
 function removeChips() {
@@ -451,6 +460,7 @@ function removeChips() {
     currentChipsContainer.remove();
     currentChipsContainer = null;
   }
+  syncInputWithChips();
 }
 
 // ========================== AUTO SCROLL
@@ -520,4 +530,7 @@ async function sendChipEvent(chip) {
   }
 }
 
-
+function syncInputWithChips(){
+  const input = document.getElementById("user-input");
+  input.disabled = !!currentChipsContainer; // 如果有芯片显示，禁用输入框；否则启用
+}

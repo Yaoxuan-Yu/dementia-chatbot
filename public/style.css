@@ -106,6 +106,13 @@ body {
 }
 
 /* Typing Animation */
+.typing {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 20px;
+}
+
 .typing span {
   display: inline-block;
   width: 6px;
