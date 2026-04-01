@@ -280,21 +280,55 @@ function addMessage(text, sender, timestamp) {
   const chatBox = document.getElementById("chat-box");
 
   // Show date separator once per day
-  if (timestamp) {
-    const date = new Date(timestamp);
-    const dateStr = date.toLocaleDateString();
+if (timestamp) {
+  let date;
+
+  // Firestore Timestamp
+  if (typeof timestamp.toDate === "function") {
+    date = timestamp.toDate();
+  } 
+  // already a JS Date
+  else if (timestamp instanceof Date) {
+    date = timestamp;
+  } 
+  // string / number
+  else {
+    date = new Date(timestamp);
+  }
+
+  if (!isNaN(date.getTime())) {
+    const dateStr = date.toLocaleDateString("en-SG");
+
+    const reminderStr = `
+      <strong>[ Important Reminder ]</strong> If there is immediate severe injury or urgent health crisis:</br>
+      Please contact Singapore Emergency Hotline 999 / Go to the nearest hospital. 
+      Caregiver support & dementia official resources:
+      <a href="https://www.dementiasociety.org.sg" target="_blank" class="notice-link">
+        Dementia Society Singapore
+      </a>
+    `;
+
     if (dateStr !== lastShownDate) {
       lastShownDate = dateStr;
+
       const sep = document.createElement("div");
       sep.className = "chat-date-separator";
+
       const timeStr = date.toLocaleString("en-SG", {
         dateStyle: "medium",
         timeStyle: "short"
       });
-      sep.innerHTML = `${timeStr}`;
+
+      sep.innerHTML = `
+        ${timeStr}
+        <div class="notice-small mt-3">${reminderStr}</div>
+      `;
+
       chatBox.appendChild(sep);
     }
   }
+}
+
 
   if (sender === "bot") {
     const wrapper = document.createElement("div");

@@ -82,14 +82,8 @@ body {
 .chat-date-separator {
   text-align: center;
   margin: 12px 0;
-}
-.chat-date-text {
   font-size: 12px;
   color: #888;
-  background: #eee;
-  padding: 4px 10px;
-  border-radius: 12px;
-  display: inline-block;
 }
 
 /* Bot layout */
@@ -218,10 +212,10 @@ body {
 /* Mobile — BIGGER UI (FIXES #4) */
 @media (max-width: 768px) {
   .sidebar {
-    flex: 0 0 70px;
-    max-width: 70px;
+    flex: 0 0 150px;
+    max-width: 150px;
   }
-  .sidebar .sidebar-text { display: none; }
+
   .user, .bot-bubble { max-width: 88%; font-size: 16px; padding: 14px 18px; }
   .chat-box { padding: 15px 8px; }
   .input-area input { font-size: 16px; padding: 14px 18px; }
