@@ -139,4 +139,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 # Google Cloud service account key file
-functions/account-service.json
+functions/service-account.json

@@ -49,8 +49,7 @@
 </div>
 
 <script>
-
-    const firebaseConfig = {
+  const firebaseConfig = {
     apiKey: "AIzaSyBkcFma_F3MqKqNgmRyj9k_XO0XLAmL60o",
     authDomain: "ai-humanity-g3.firebaseapp.com",
     projectId: "ai-humanity-g3",
@@ -58,15 +57,15 @@
     messagingSenderId: "42108703629",
     appId: "1:42108703629:web:ac1f6113b086fc316ba3c4",
     measurementId: "G-ZHEYJ9QMG5"
-    };
+  };
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
 
-  // Redirect if already logged in
+  // ✅ FIXED: redirect to CHAT PAGE if already logged in
   auth.onAuthStateChanged(user => {
     if (user) {
-      window.location.href = "login.html";
+      window.location.href = "index.html";
     }
   });
 

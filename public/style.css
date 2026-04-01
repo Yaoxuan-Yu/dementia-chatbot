@@ -9,6 +9,12 @@ body {
   background: #fff;
   padding: 15px;
   border-right: 1px solid #ddd;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 150px;
+  max-width: 250px;
 }
 
 .new-chat-btn {
@@ -61,6 +67,25 @@ body {
   padding: 10px 14px;
   border-radius: 12px;
   max-width: 70%;
+  white-space: pre-line;
+  line-height: 1.5;
+}
+
+/* Typing Animation */
+.typing span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 2px;
+  background: #888;
+  border-radius: 50%;
+  animation: blink 1.4s infinite;
+}
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink {
+  0%, 80%, 100% { opacity: 0; }
+  40% { opacity: 1; }
 }
 
 /* User */
@@ -71,7 +96,7 @@ body {
   margin-bottom: 10px;
   padding: 10px 14px;
   border-radius: 12px;
-  max-width: 70%;
+  width: fit-content;
 }
 
 /* Input */
@@ -119,132 +144,83 @@ body {
   background: #d3e3fd;
 }
 
-.chips button.clicked {
-  background: #bbb;
-}
-
-/* Typing */
-.typing span {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin: 2px;
-  background: #888;
-  border-radius: 50%;
-  animation: blink 1.4s infinite;
-}
-
-.typing span:nth-child(2) { animation-delay: 0.2s; }
-.typing span:nth-child(3) { animation-delay: 0.4s; }
-
-@keyframes blink {
-  0%, 80%, 100% { opacity: 0; }
-  40% { opacity: 1; }
-}
-
 /* Mobile */
 @media (max-width: 768px) {
-
-  /* Sidebar becomes collapsed instead of disappearing */
   .sidebar {
     flex: 0 0 70px;
     max-width: 70px;
   }
-
-  /* Hide text when small screen */
-  .sidebar .sidebar-text {
-    display: none;
-  }
-
-  /* Keep icons centered */
-  .sidebar .btn {
-    justify-content: center;
-  }
-
-  .user, .bot-bubble {
-    max-width: 85%;
-  }
+  .sidebar .sidebar-text { display: none; }
+  .user, .bot-bubble { max-width: 85%; }
 }
 
-/* Sidebar base */
-.sidebar {
-  transition: all 0.3s ease;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Collapsed sidebar */
-.sidebar.collapsed {
-  width: 70px !important;
-}
-
-/* Hide text when collapsed */
-.sidebar.collapsed .sidebar-text {
-  display: none;
-}
-
-/* Center icons when collapsed */
-.sidebar.collapsed .btn {
-  justify-content: center;
-  text-align: center;
-}
-
-/* Optional: make toggle button more compact */
-#sidebarToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Make columns behave like flex instead of fixed bootstrap widths */
-.sidebar {
-  flex: 0 0 150px; /* expanded width */
-  max-width: 250px;
-  transition: all 0.3s ease;
-}
-
-.chat-container {
-  flex: 1; /* take remaining space */
-  min-width: 0; /* prevents overflow issues */
-}
-
-/* Collapsed sidebar */
 .sidebar.collapsed {
   flex: 0 0 70px;
   max-width: 70px;
 }
+.sidebar.collapsed .sidebar-text { display: none; }
 
-// User profile section
+.chat-container {
+  flex: 1;
+  min-width: 0;
+}
+
 .user-profile {
   border-top: 1px solid #ddd;
   padding-top: 10px;
 }
 
-.username-text {
-  font-size: 10px;
-}
-
-/* Logout button alignment */
 .logout-btn {
   display: flex;
   align-items: center;
   justify-content: flex-start;
 }
-
-/* When sidebar is collapsed */
 .sidebar.collapsed .logout-btn {
   justify-content: center;
-  padding: 8px;
 }
-
-/* Hide text inside logout button when collapsed */
-.sidebar.collapsed .logout-btn .sidebar-text {
-  display: none;
-}
-
-/* Ensure username is hidden when collapsed */
 .sidebar.collapsed #user-name {
   display: none;
 }
 
+/* Clean chat history button - small text, no border, muted hover */
+.chat-history-btn {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  padding: 4px 6px;
+  margin-bottom: 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: left;
+  color: #374151;
+  width: 100%;
+}
+
+/* Hover = soft muted background */
+.chat-history-btn:hover {
+  background-color: #f3f4f6;
+}
+
+/* FIXED LAYOUT — AUTO PUSH UP CHAT LIKE NORMAL CHAT APP */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.chat-box {
+  max-height: calc(100vh - 140px) !important;
+  overflow-y: auto !important;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
