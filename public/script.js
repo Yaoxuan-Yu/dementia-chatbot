@@ -20,6 +20,8 @@ let chatHistory = [];
 let allChats = JSON.parse(localStorage.getItem("allChats")) || [];
 let currentChatId = null;
 let lastShownDate = null;
+let firstWelcomeReady = false;
+
 
 // ========================== INIT
 document.addEventListener("DOMContentLoaded", () => {
@@ -72,15 +74,27 @@ function saveCurrentChat() {
 }
 
 function newChat() {
+  firstWelcomeReady = false;
+  document.getElementById("user-input").disabled = true; // 禁用输入框，直到欢迎消息加载完成
+  console.log("newChat triggered"); // 原有日志保留
   saveCurrentChat();
   chatHistory = [];
   currentChatId = null;
   localStorage.removeItem("dialogflowSessionId");
   lastShownDate = null;
   refreshChatUI();
+  // 新增：延迟100ms调用triggerWelcome（确保refreshChatUI执行完成，避免DOM未渲染）
+  setTimeout(async () => {
+    console.log("setTimeout triggerWelcome called"); // 新增：确认延迟函数执行
+    // 捕获异常，避免影响整体流程
+    await triggerWelcome().catch(err => console.error("triggerWelcome in newChat error: ", err));
+  }, 100);
 }
 
 function loadChat(chatId) {
+  firstWelcomeReady = false;
+  document.getElementById("user-input").disabled = false;
+
   saveCurrentChat();
   const chat = allChats.find(c => c.id === chatId);
   if (chat) {
@@ -109,12 +123,12 @@ function renderHistoryButtons() {
     titleSpan.title = chat.title;
 
     const actions = document.createElement("div");
-    actions.className = "d-flex gap-2 flex-shrink-0";
+    actions.className = "d-flex gap-3 flex-shrink-0";
 
-    // Edit - 修复：支持输入空格、回车/失焦保存
+    // Edit 
     const edit = document.createElement("i");
     edit.className = "bi bi-pencil";
-    edit.style.fontSize = "11px";
+    edit.style.fontSize = "18px";
     edit.onclick = (e) => {
       e.stopPropagation();
       const input = document.createElement("input");
@@ -153,7 +167,7 @@ function renderHistoryButtons() {
     // Delete
     const del = document.createElement("i");
     del.className = "bi bi-trash";
-    del.style.fontSize = "11px";
+    del.style.fontSize = "18px";
     del.onclick = (e) => {
       e.stopPropagation();
       if (!confirm("Delete this chat?")) return;
@@ -171,7 +185,13 @@ function renderHistoryButtons() {
 }
 
 function refreshChatUI() {
+  console.log("refreshChatUI triggered"); // 新增日志：确认函数触发
   const chatBox = document.getElementById("chat-box");
+  console.log("chatBox element: ", chatBox); // 新增：查看chat-box是否存在（关键，避免元素找不到报错）
+  if (!chatBox) {
+    console.error("refreshChatUI error: chat-box element not found!");
+    return; // 避免后续代码报错，终止执行
+  }
   chatBox.innerHTML = "";
   removeChips();
   lastShownDate = null;
@@ -201,6 +221,60 @@ function removeTyping() {
   document.querySelectorAll(".typing").forEach(el => el.remove());
 }
 
+/// ========================== TRIGGER WELCOME
+async function triggerWelcome() {
+  const hiddenText = "Hi";
+  try {
+    const sessionId = localStorage.getItem("dialogflowSessionId") || generateSessionId();
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: hiddenText,
+        sessionId: sessionId
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.reply || data.fulfillmentText || data.text || "";
+
+    if (reply.trim()) {
+      const botTs = new Date().toISOString();
+      addMessage(reply, "bot", botTs);
+    }
+
+    let chips = [];
+    if (data.richContent && Array.isArray(data.richContent) && data.richContent.length > 0) {
+      data.richContent.forEach(row => {
+        if (Array.isArray(row)) {
+          row.forEach(item => {
+            if (typeof item === "object" && item.type === "chips" && Array.isArray(item.options)) {
+              chips = item.options.map(opt => {
+                return typeof opt === "object" && opt.text ? opt.text.trim() : "";
+              }).filter(text => text);
+            }
+          });
+        }
+      });
+    } else if (data.chips && Array.isArray(data.chips)) {
+      chips = data.chips.map(chip => {
+        return typeof chip === "object" ? (chip.text || "") : chip.toString().trim();
+      }).filter(text => text);
+    }
+
+    if (chips.length) {
+      addChips(chips);
+    }
+
+    if (!firstWelcomeReady) {
+      firstWelcomeReady = true;
+      document.getElementById("user-input").disabled = false; // 欢迎消息加载完成，启用输入框
+    }
+
+  } catch (err) {
+    console.error("welcome error", err);
+  }
+}
 // ========================== SEND MESSAGE
 async function sendMessage(textOverride = null) {
   const input = document.getElementById("user-input");
@@ -443,3 +517,5 @@ async function sendChipEvent(chip) {
     }
   }
 }
+
+
