@@ -83,6 +83,13 @@ function newChat() {
   localStorage.removeItem("dialogflowSessionId");
   lastShownDate = null;
   refreshChatUI();
+
+  
+   if (window.innerWidth <= 768) {
+    document.getElementById("sidebarToggle").click();
+  }
+
+
   setTimeout(async () => {
     console.log("setTimeout triggerWelcome called");
     await triggerWelcome().catch(err => console.error("triggerWelcome in newChat error: ", err));
@@ -121,8 +128,10 @@ function renderHistoryButtons() {
     actions.className = "d-flex gap-3 flex-shrink-0";
 
     const edit = document.createElement("i");
-    edit.className = "bi bi-pencil";
-    edit.style.fontSize = "18px";
+    edit.className = "bi bi-pencil-fill";
+    edit.style.fontSize = "16px";
+    edit.style.color = "#979292";
+
     edit.onclick = (e) => {
       e.stopPropagation();
       const input = document.createElement("input");
@@ -153,8 +162,9 @@ function renderHistoryButtons() {
     };
 
     const del = document.createElement("i");
-    del.className = "bi bi-trash";
-    del.style.fontSize = "18px";
+    del.className = "bi bi-trash-fill";
+    del.style.fontSize = "16px";
+    del.style.color = "#979292";
     del.onclick = (e) => {
       e.stopPropagation();
       if (!confirm("Delete this chat?")) return;
