@@ -113,6 +113,13 @@ function loadChat(chatId) {
     chatHistory = [...chat.messages];
     lastShownDate = null;
     refreshChatUI();
+    if (window.innerWidth <= 768) {
+      const sidebar = document.getElementById("sidebar");
+      const toggle = document.getElementById("sidebarToggle");
+      if (sidebar && !sidebar.classList.contains("collapsed") && toggle) {
+        toggle.click();
+      }
+    }
   }
 }
 
