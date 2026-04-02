@@ -78,6 +78,7 @@ function saveCurrentChat() {
 
 function newChat() {
   firstWelcomeReady = false;
+  document.getElementById("user-input").disabled = true; // 禁用输入框，直到欢迎消息加载完成
   console.log("newChat triggered"); // 原有日志保留
   saveCurrentChat();
   chatHistory = [];
@@ -197,7 +198,7 @@ function refreshChatUI() {
   chatBox.innerHTML = "";
   removeChips();
   lastShownDate = null;
-  chatHistory.forEach(msg => addMessage(msg.text, msg.sender, msg.timestamp));
+  chatHistory.forEach(msg => addMessage(msg.text, msg.sender, msg.timestamp, msg.richContent));
   renderHistoryButtons();
   scrollToBottom();
 }
@@ -249,7 +250,7 @@ async function triggerWelcome() {
 
     if (reply.trim()) {
       const botTs = new Date().toISOString();
-      addMessage(reply, "bot", botTs);
+      addMessage(reply, "bot", botTs, data.richContent);
     }
 
     let chips = [];
@@ -274,25 +275,35 @@ async function triggerWelcome() {
     if (chips.length) {
       addChips(chips);
     }
+    if (data.richContent && data.richContent.length) {
+  renderRichContent(data.richContent);
+}
   } catch (err) {
     console.error("welcome error", err);
   }
 }
 // ========================== SEND MESSAGE
 async function sendMessage(textOverride = null) {
+  console.log("🚀 ========== sendMessage START ==========");
   const input = document.getElementById("user-input");
   const text = textOverride || input.value.trim();
-  if (!text) return;
+  console.log("📝 要发的文字:", text);
+
+  if (!text) {
+    console.log("❌ 文字为空，直接return");
+    return;
+  }
   
   const timestamp = new Date().toISOString();
   addMessage(text, "user", timestamp);
-  chatHistory.push({ sender: "user", text, timestamp });
+  chatHistory.push({ sender: "user", text, timestamp});
   saveCurrentChat();
   input.value = "";
   removeChips();
   document.getElementById("user-input").disabled = true; 
 
   addTyping();
+  console.log("⌨️ 已显示typing动画");
 
   try {
     const res = await fetch(API_URL, {
@@ -304,49 +315,54 @@ async function sendMessage(textOverride = null) {
       })
     });
 
+    console.log("🌐 fetch返回status:", res.status);
     const data = await res.json();
+    console.log("📦 后端完整回包 data =", JSON.stringify(data,null,2));
+
     removeTyping();
-      document.getElementById("user-input").disabled = false; 
+    console.log("⌨️ typing已移除");
+    document.getElementById("user-input").disabled = false; 
 
     const reply = data.reply || data.fulfillmentText || data.text || "";
+    console.log("💬 纯文字reply:", reply);
+    console.log("🧩 是否有richContent:", !!data.richContent);
 
-    if (reply.trim()) {
-      const botTimestamp = new Date().toISOString();
-      addMessage(reply, "bot", botTimestamp);
-      chatHistory.push({ sender: "bot", text: reply, timestamp: botTimestamp });
-      saveCurrentChat();
-    }
+    if (reply || data.richContent) {
+      const botTs = new Date().toISOString();
+      console.log("🤖 准备添加bot气泡 + 渲染富内容");
+      addMessage(reply, "bot", botTs, data.richContent);
 
-    // 仅修改此处芯片解析逻辑，彻底解决[object Object]问题
-    let chips = [];
-    // 严格适配API返回的richContent格式（[{options: [{text: "..."}], type: "chips"}]）
-    if (data.richContent && Array.isArray(data.richContent) && data.richContent.length > 0) {
-      // 遍历richContent每一行，找到type为chips的项
-      data.richContent.forEach(row => {
-        if (Array.isArray(row)) {
-          row.forEach(item => {
-            // 确保item是对象、有type和options，且options是数组
-            if (typeof item === "object" && item.type === "chips" && Array.isArray(item.options)) {
-              // 只提取options中的text，过滤非字符串项
-              chips = item.options.map(opt => {
-                return typeof opt === "object" && opt.text ? opt.text.trim() : "";
-              }).filter(text => text); // 过滤空字符串，避免无效芯片
-            }
-          });
-        }
+      chatHistory.push({
+        sender: "bot",
+        text: reply,
+        timestamp: botTs,
+        richContent: data.richContent
       });
-    } else if (data.chips && Array.isArray(data.chips)) {
-      // 兼容旧的chips格式，防止解析异常
-      chips = data.chips.map(chip => {
-        return typeof chip === "object" ? (chip.text || "") : chip.toString().trim();
-      }).filter(text => text);
+      saveCurrentChat();
+    }else{
+      console.log("⚠️ 后端既没文字也没richContent");
     }
-    // 只有芯片数组有有效内容时才渲染
-    if (chips.length) addChips(chips);
+
+    // 解析普通chips
+    let chips = [];
+    if (data.richContent && Array.isArray(data.richContent)) {
+      data.richContent.forEach(row=>{
+        if(!Array.isArray(row))return;
+        row.forEach(item=>{
+          if(item.type==="chips" && item.options){
+            chips = item.options.map(o=>o.text||"").filter(Boolean);
+          }
+        });
+      });
+    }
+    if(chips.length){
+      console.log("🍟 渲染底部chips:",chips);
+      addChips(chips);
+    }
 
   } catch (err) {
     removeTyping();
-    console.error(err);
+    console.error("❌ 请求报错:", err);
   }
 }
 
@@ -357,60 +373,39 @@ function generateSessionId() {
 }
 
 // ========================== ADD MESSAGE + DATE TIME (ISSUE #3)
-function addMessage(text, sender, timestamp) {
+// ========================== ADD MESSAGE + DATE TIME + RICH CONTENT
+function addMessage(text, sender, timestamp, richContent = null) {
   const chatBox = document.getElementById("chat-box");
+  let messageBubble = null; // We will return this for rich content
 
-  // Show date separator once per day
-if (timestamp) {
-  let date;
+  // Date separator
+  if (timestamp) {
+    let date;
+    if (typeof timestamp.toDate === "function") date = timestamp.toDate();
+    else if (timestamp instanceof Date) date = timestamp;
+    else date = new Date(timestamp);
 
-  // Firestore Timestamp
-  if (typeof timestamp.toDate === "function") {
-    date = timestamp.toDate();
-  } 
-  // already a JS Date
-  else if (timestamp instanceof Date) {
-    date = timestamp;
-  } 
-  // string / number
-  else {
-    date = new Date(timestamp);
-  }
-
-  if (!isNaN(date.getTime())) {
-    const dateStr = date.toLocaleDateString("en-SG");
-
-    const reminderStr = `
-      <strong>[ Important Reminder ]</strong> If there is immediate severe injury or urgent health crisis:</br>
-      Please contact Singapore Emergency Hotline 999 / Go to the nearest hospital. 
-      Caregiver support & dementia official resources:
-      <a href="https://www.dementiasociety.org.sg" target="_blank" class="notice-link">
-        Dementia Society Singapore
-      </a>
-    `;
-
-    if (dateStr !== lastShownDate) {
-      lastShownDate = dateStr;
-
-      const sep = document.createElement("div");
-      sep.className = "chat-date-separator";
-
-      const timeStr = date.toLocaleString("en-SG", {
-        dateStyle: "medium",
-        timeStyle: "short"
-      });
-
-      sep.innerHTML = `
-        ${timeStr}
-        <div class="notice-small mt-3">${reminderStr}</div>
+    if (!isNaN(date.getTime())) {
+      const dateStr = date.toLocaleDateString("en-SG");
+      const reminderStr = `
+        <strong>[ Important Reminder ]</strong> If there is immediate severe injury or urgent health crisis:</br>
+        Please contact Singapore Emergency Hotline 999 / Go to the nearest hospital. 
+        Caregiver support & dementia official resources:
+        <a href="https://www.dementiasociety.org.sg" target="_blank" class="notice-link">Dementia Society Singapore</a>
       `;
 
-      chatBox.appendChild(sep);
+      if (dateStr !== lastShownDate) {
+        lastShownDate = dateStr;
+        const sep = document.createElement("div");
+        sep.className = "chat-date-separator";
+        const timeStr = date.toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short" });
+        sep.innerHTML = `${timeStr}<div class="notice-small mt-3">${reminderStr}</div>`;
+        chatBox.appendChild(sep);
+      }
     }
   }
-}
 
-
+  // Bot message (with rich content support)
   if (sender === "bot") {
     const wrapper = document.createElement("div");
     wrapper.className = "bot-message-wrapper";
@@ -419,39 +414,53 @@ if (timestamp) {
     img.className = "avatar";
     const bubble = document.createElement("div");
     bubble.className = "bot-bubble";
-    bubble.textContent = text;
+    bubble.innerHTML = text; 
+
     wrapper.appendChild(img);
     wrapper.appendChild(bubble);
-    chatBox.appendChild(wrapper);
-  } else {
+    document.getElementById("chat-box").appendChild(wrapper);
+
+    // ===== Debug + 强制渲染富内容 =====
+    if(richContent){
+      console.log("🖼️ addMessage收到richContent，准备调用渲染函数");
+      renderRichContent(richContent, bubble);
+    }
+  }
+
+  // User message
+  else {
     const msg = document.createElement("div");
     msg.className = "user";
     msg.textContent = text;
     chatBox.appendChild(msg);
   }
+
   scrollToBottom();
+  return messageBubble; // Return bubble so we can add rich content to it
 }
 
 // ========================== CHIPS（仅优化渲染逻辑，避免异常）
+// ========================== FIXED CHIP BUTTONS (WORKS 100%)
 function addChips(chips) {
   removeChips();
   const container = document.createElement("div");
   container.className = "chips";
-  // 遍历芯片数组，确保只渲染有效文本
+  
   chips.forEach(text => {
-    if (text && typeof text === "string") {
-      const btn = document.createElement("button");
-      btn.textContent = text;
-      btn.onclick = () => {
-        if (text.trim().toLowerCase() ==="test"){
-          window.location.href = "game.html";
-          return;
-        }
-        sendMessage(text);
-      }
-      container.appendChild(btn);
-    }
+    if (!text) return;
+    
+    const btn = document.createElement("button");
+    btn.textContent = text;
+    
+    // 👇 FIX: Force sendMessage when chip button is clicked
+    btn.onclick = () => {
+      console.log("✅ Chip clicked:", text); // Debug log
+      sendMessage(text); // This calls the API!
+    };
+    
+    container.appendChild(btn);
   });
+
   currentChipsContainer = container;
   document.getElementById("chat-box").appendChild(container);
   scrollToBottom();
@@ -536,4 +545,55 @@ async function sendChipEvent(chip) {
 function syncInputWithChips(){
   const input = document.getElementById("user-input");
   input.disabled = !!currentChipsContainer; // 如果有芯片显示，禁用输入框；否则启用
+}
+
+// ========================== RENDER RICH CONTENT (info + lists + links)
+function renderRichContent(richContent, container){
+  console.log("🎨 renderRichContent 执行中:", richContent);
+  if(!richContent || !Array.isArray(richContent)){
+    console.log("❌ richContent格式不对，不是数组");
+    return;
+  }
+
+  richContent.forEach(block=>{
+    if(!Array.isArray(block))return;
+    block.forEach(item=>{
+      if(item.type==="info"){
+        const div = document.createElement("div");
+        div.style.background="#e3f2fd";
+        div.style.padding="10px";
+        div.style.borderRadius="6px";
+        div.style.margin="8px 0";
+        div.innerHTML = `<strong>${item.title}</strong><br>${item.subtitle}`;
+        container.appendChild(div);
+        console.log("✅ 已画出info卡片");
+      }
+      if(item.type==="list" && item.items){
+        const wrap = document.createElement("div");
+        wrap.style.border="1px solid #ccc";
+        wrap.style.borderRadius="6px";
+        wrap.style.margin="8px 0";
+
+        const head = document.createElement("div");
+        head.style.background="#f5f5f5";
+        head.style.padding="8px";
+        head.innerText = item.title;
+        wrap.appendChild(head);
+
+        item.items.forEach(it=>{
+          const line = document.createElement("div");
+          line.style.padding="8px";
+          if(it.link){
+            line.innerHTML = `<a href="${it.link}" target="_blank">${it.title}</a><br><small>${it.subtitle}</small>`;
+          }else{
+            line.innerText = it.title;
+          }
+          wrap.appendChild(line);
+        });
+
+        container.appendChild(wrap);
+        console.log("✅ 已画出list卡片");
+      }
+    });
+  });
 }

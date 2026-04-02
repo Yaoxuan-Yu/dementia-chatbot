@@ -4,7 +4,6 @@ const cors = require("cors")({ origin: true });
 
 const { SessionsClient } = require("@google-cloud/dialogflow-cx");
 
-
 exports.chatbot = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
     try {
@@ -30,54 +29,51 @@ exports.chatbot = functions.https.onRequest((req, res) => {
         sessionId
       );
 
-      // Handle TEXT input OR EVENT input (from chips)
       let queryInput;
       if (req.body.event) {
-        // Trigger Dialogflow Event (from chip click)
         queryInput = {
-          event: {
-            event: req.body.event,
-            languageCode: "en",
-          },
+          event: { event: req.body.event, languageCode: "en" },
         };
       } else {
-        // Regular text message
         queryInput = {
-          text: {
-            text: userMessage,
-          },
+          text: { text: userMessage },
           languageCode: "en",
         };
       }
 
-      const request = {
-        session: sessionPath,
-        queryInput: queryInput,
-      };
-
+      const request = { session: sessionPath, queryInput };
       const [response] = await client.detectIntent(request);
-
       const queryResult = response.queryResult;
+      const messages = queryResult?.responseMessages || [];
+
       let reply = "";
       let chips = [];
-
-      const messages = queryResult?.responseMessages || [];
+      let richContent = null; // 👈 新增：用来存完整的富内容
 
       for (const msg of messages) {
         if (msg.text?.text?.length) {
           reply = msg.text.text.join(" ");
         }
 
-        // Parse rich content chips (text + event)
-        const richContent = msg.payload?.fields?.richContent?.listValue?.values;
-        if (richContent) {
-          for (const row of richContent) {
+        // 👇 关键：提取 Dialogflow 里的完整 richContent
+        const rc = msg.payload?.fields?.richContent;
+        if (rc) {
+          richContent = rc.listValue?.values?.map(row => {
+            return row.listValue?.values?.map(item => {
+              return convertStructToJson(item.structValue?.fields);
+            });
+          });
+        }
+
+        // 原有 chips 解析
+        const richContentLegacy = msg.payload?.fields?.richContent?.listValue?.values;
+        if (richContentLegacy) {
+          for (const row of richContentLegacy) {
             const rowValues = row.listValue?.values || [];
             for (const item of rowValues) {
               const struct = item.structValue?.fields;
               if (struct?.type?.stringValue === "chips") {
                 const options = struct.options?.listValue?.values || [];
-                // Extract FULL chip data: text + event
                 chips = options.map(opt => {
                   const fields = opt.structValue?.fields;
                   return {
@@ -91,7 +87,8 @@ exports.chatbot = functions.https.onRequest((req, res) => {
         }
       }
 
-      return res.json({ reply, chips });
+      // 👇 关键：把 richContent 一起返回给前端！
+      return res.json({ reply, chips, richContent });
 
     } catch (error) {
       console.error("Dialogflow API Error:", error);
@@ -99,3 +96,25 @@ exports.chatbot = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// 👇 新增工具函数：把 Dialogflow 的结构体 转成 正常 JSON
+function convertStructToJson(fields) {
+  if (!fields) return null;
+  const result = {};
+  for (const key in fields) {
+    const val = fields[key];
+    if (val.stringValue !== undefined) result[key] = val.stringValue;
+    if (val.integerValue !== undefined) result[key] = parseInt(val.integerValue);
+    if (val.numberValue !== undefined) result[key] = val.numberValue;
+    if (val.booleanValue !== undefined) result[key] = val.booleanValue;
+    if (val.listValue) {
+      result[key] = val.listValue.values.map(item => {
+        return convertStructToJson(item.structValue?.fields);
+      });
+    }
+    if (val.structValue) {
+      result[key] = convertStructToJson(val.structValue.fields);
+    }
+  }
+  return result;
+}

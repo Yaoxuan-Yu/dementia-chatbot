@@ -277,3 +277,39 @@ html, body {
   flex-direction: column;
   gap: 4px;
 }
+/* RICH CONTENT STYLES */
+.rich-info-card {
+  background: #e3f2fd;
+  border-left: 4px solid #0277bd;
+  padding: 10px 14px;
+  margin: 8px 0;
+  border-radius: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.rich-info-card h4 { margin:0; font-size:15px; }
+.rich-info-card p { margin:4px 0 0; font-size:12px; color:#555; }
+.rich-list-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin: 8px 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.rich-list-title {
+  background: #f5f5f5;
+  padding: 8px 12px;
+  font-weight: bold;
+  font-size:13px;
+}
+.rich-list-item {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.rich-list-item:last-child { border-bottom:none; }
+.rich-link {
+  text-decoration: none;
+  color: #0277bd;
+  display: block;
+}
