@@ -2,30 +2,147 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mini game</title>
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Memory Game</title>
 <style>
 * {margin:0;padding:0;box-sizing:border-box;}
-body{font-family:sans-serif;background:#f5f5f5;color:#222;text-align:center;padding:20px;}
-h1{font-size:2rem;margin:20px 0;}
-#g_levelDisplay{font-size:1.4rem;font-weight:bold;margin:10px 0;}
+body{
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background: #0f172a;
+    color: #f1f5f9;
+    text-align: center;
+    padding: 20px;
+    min-height: 100vh;
+}
+h1{
+    font-size: 2.4rem;
+    margin: 12px 0;
+    color: #ffd700;
+    text-shadow: 0 0 10px rgba(255,215,0,0.3);
+}
 
-#g_coverOverlay{position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.9);color:#fff;display:flex;justify-content:center;align-items:center;font-weight:bold;z-index:9999;}
-.textMedium{font-size:4rem;}
-.textBig{font-size:7rem;}
+/* 分数 + 关卡 */
+#g_levelDisplay{
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 6px 0;
+    color: #a5f3fc;
+}
+#g_scoreDisplay{
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 6px 0;
+    color: #34d399;
+}
+
+#g_coverOverlay{
+    position: fixed;
+    top:0;left:0;
+    width:100vw;
+    height:100vh;
+    background:rgba(0,0,0,0.9);
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-weight:bold;
+    z-index:9999;
+    flex-direction:column;
+    gap:20px;
+}
+.textMedium{font-size:3rem;}
+.textBig{font-size:6rem;}
 .hide{display:none !important;}
 
-.board{display:grid;grid-template-columns:1fr 1fr;gap:15px;max-width:450px;margin:30px auto;}
-.quadrant{width:100%;aspect-ratio:1/1;border-radius:16px;border:10px solid transparent;cursor:pointer;opacity:0.9;transition:all 0.6s ease;}
-.quadrant.flash{border:10px solid #000;opacity:1;transform:scale(1.05);}
-#g_green{background:#28a745;}
-#g_red{background:#dc3545;}
-#g_yellow{background:#ffc107;}
-#g_blue{background:#007bff;}
+/* 3×2 网格 */
+.board{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:18px;
+    max-width:620px;
+    margin:30px auto;
+    padding: 10px;
+}
+.quadrant{
+    width:100%;
+    aspect-ratio:1/1;
+    border-radius:20px;
+    border: 6px solid #1e293b;
+    cursor:pointer;
+    opacity:0.92;
+    transition: all 0.4s cubic-bezier(0.25,1,0.5,1);
+    background-size:cover;
+    background-position:center;
+    position: relative;
+    overflow: hidden;
+}
+/* 高亮边框：亮黄色 + 超粗 */
+.quadrant.flash{
+    border: 10px solid #ffff00 !important;
+    box-shadow: 0 0 25px #ffff00, 0 0 50px rgba(255,255,0,0.5);
+    opacity:1;
+    transform: scale(1.06);
+}
+/* 错误提示样式：直接显示在图片上 */
+.wrong-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.8rem;
+    font-weight: 900;
+    color: #ff3333;
+    text-shadow: 0 0 15px #ff0000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 10;
+}
+.quadrant.wrong .wrong-text {
+    opacity: 1;
+    animation: wrongPulse 0.6s ease;
+}
+@keyframes wrongPulse {
+    0% { transform: translate(-50%,-50%) scale(0.8); }
+    50% { transform: translate(-50%,-50%) scale(1.15); }
+    100% { transform: translate(-50%,-50%) scale(1); }
+}
 
-button{padding:12px 24px;font-size:1rem;border:none;border-radius:8px;margin:8px;cursor:pointer;}
-#g_startBtn{background:#007bff;color:#fff;}
-#g_backBtn{background:#6c757d;color:#fff;}
+/* 图片 */
+#g_img1{background-image:url('https://picsum.photos/id/237/300/300');}
+#g_img2{background-image:url('https://picsum.photos/id/100/300/300');}
+#g_img3{background-image:url('https://picsum.photos/id/10/300/300');}
+#g_img4{background-image:url('https://picsum.photos/id/20/300/300');}
+#g_img5{background-image:url('https://picsum.photos/id/30/300/300');}
+#g_img6{background-image:url('https://picsum.photos/id/40/300/300');}
+
+/* 高级统一按钮 */
+button {
+    padding: 14px 32px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 14px;
+    margin: 10px 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+}
+button:active {
+    transform: translateY(0);
+}
+#g_startBtn{
+    background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+    color: #fff;
+}
+#g_backBtn{
+    background: linear-gradient(135deg, #64748b, #475569);
+    color: #fff;
+}
 </style>
 </head>
 <body>
@@ -33,37 +150,51 @@ button{padding:12px 24px;font-size:1rem;border:none;border-radius:8px;margin:8px
 <div id="g_coverOverlay" class="hide"></div>
 <h1>Memory Game</h1>
 <div id="g_levelDisplay">Level: 0</div>
+<div id="g_scoreDisplay">Score: 0</div>
 
 <div class="board">
-  <div class="quadrant" id="g_green"></div>
-  <div class="quadrant" id="g_red"></div>
-  <div class="quadrant" id="g_yellow"></div>
-  <div class="quadrant" id="g_blue"></div>
+  <div class="quadrant" id="g_img1"><span class="wrong-text">WRONG -50</span></div>
+  <div class="quadrant" id="g_img2"><span class="wrong-text">WRONG -50</span></div>
+  <div class="quadrant" id="g_img3"><span class="wrong-text">WRONG -50</span></div>
+  <div class="quadrant" id="g_img4"><span class="wrong-text">WRONG -50</span></div>
+  <div class="quadrant" id="g_img5"><span class="wrong-text">WRONG -50</span></div>
+  <div class="quadrant" id="g_img6"><span class="wrong-text">WRONG -50</span></div>
 </div>
 
 <button id="g_startBtn">Start Game</button>
-<br>
-<button onclick="window.close()" id="g_backBtn">Back to Chat</button>
+<button id="g_backBtn">Back to Chat</button>
 
 <script>
 const g_overlay = document.getElementById("g_coverOverlay");
-const g_colors = {
-  green:document.getElementById("g_green"),
-  red:document.getElementById("g_red"),
-  yellow:document.getElementById("g_yellow"),
-  blue:document.getElementById("g_blue")
-};
-const g_allBlocks = document.querySelectorAll(".quadrant");
 const g_levelText = document.getElementById("g_levelDisplay");
+const g_scoreText = document.getElementById("g_scoreDisplay");
 const g_startBtn = document.getElementById("g_startBtn");
-const g_backBtn = document.getElementById("g_backBtn");
+
+const g_images = {
+  img1: document.getElementById("g_img1"),
+  img2: document.getElementById("g_img2"),
+  img3: document.getElementById("g_img3"),
+  img4: document.getElementById("g_img4"),
+  img5: document.getElementById("g_img5"),
+  img6: document.getElementById("g_img6")
+};
+
+const g_allBlocks = document.querySelectorAll(".quadrant");
 
 let g_seq = [], g_playerSeq = [], g_level = 0, g_canClick = false;
 let g_isFirstRound = true;
+let g_score = 0;
+const MAX_LEVEL = 6;
 
-function g_updateLevel(){g_levelText.innerText = "Level: " + g_level;}
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-function clearAllFlash(){g_allBlocks.forEach(el=>el.classList.remove("flash"));}
+function g_updateLevel(){ g_levelText.innerText = "Level: " + g_level; }
+function g_updateScore(){ g_scoreText.innerText = "Score: " + g_score; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function clearAllFlash(){
+    g_allBlocks.forEach(el=>{
+        el.classList.remove("flash");
+        el.classList.remove("wrong");
+    });
+}
 
 async function showFirstCountdown(){
   g_overlay.classList.remove("hide");
@@ -71,70 +202,145 @@ async function showFirstCountdown(){
   g_overlay.innerText = "Follow my sequence";
   await sleep(2000);
   g_overlay.className = "textBig";
-  g_overlay.innerText = "3";await sleep(1500);
-  g_overlay.innerText = "2";await sleep(1500);
-  g_overlay.innerText = "1";await sleep(1500);
-  g_overlay.innerText = "START";await sleep(1000);
+  g_overlay.innerText = "3"; await sleep(1200);
+  g_overlay.innerText = "2"; await sleep(1200);
+  g_overlay.innerText = "1"; await sleep(1200);
+  g_overlay.innerText = "START"; await sleep(1000);
   g_overlay.classList.add("hide");
 }
 
 async function flashSys(c){
   clearAllFlash();
-  g_colors[c].classList.add("flash");
-  await sleep(1300);
-  g_colors[c].classList.remove("flash");
-  await sleep(700);
+  g_images[c].classList.add("flash");
+  await sleep(1200);
+  g_images[c].classList.remove("flash");
+  await sleep(600);
 }
+
 async function flashPlayer(c){
   clearAllFlash();
-  g_colors[c].classList.add("flash");
+  g_images[c].classList.add("flash");
   await sleep(600);
-  g_colors[c].classList.remove("flash");
+  g_images[c].classList.remove("flash");
 }
-function randomColor(){
-  const arr = Object.keys(g_colors);
+
+function randomImage(){
+  const arr = Object.keys(g_images);
   return arr[Math.floor(Math.random()*arr.length)];
 }
 
 async function playRound(){
-  clearAllFlash();g_canClick = false;
-  if(g_isFirstRound){await showFirstCountdown();g_isFirstRound=false;}
-  for(let c of g_seq)await flashSys(c);
-  await sleep(1000);clearAllFlash();
-  g_overlay.classList.remove("hide");g_overlay.className="textBig";
-  g_overlay.innerText="Your turn";await sleep(1500);g_overlay.classList.add("hide");
-  g_canClick=true;
+  clearAllFlash();
+  g_canClick = false;
+
+  if(g_isFirstRound){
+    await showFirstCountdown();
+    g_isFirstRound = false;
+  }
+
+  for(let c of g_seq) await flashSys(c);
+  await sleep(500);
+  clearAllFlash();
+
+  g_overlay.classList.remove("hide");
+  g_overlay.className = "textBig";
+  g_overlay.innerText = "Your turn";
+  await sleep(1500);
+  g_overlay.classList.add("hide");
+
+  g_canClick = true;
 }
 
 async function userPick(c){
-  if(!g_canClick)return;
+  if(!g_canClick) return;
+
   await flashPlayer(c);
   g_playerSeq.push(c);
-  let idx=g_playerSeq.length-1;
-  if(g_playerSeq[idx]!==g_seq[idx]){
-    clearAllFlash();
-    g_overlay.classList.remove("hide");g_overlay.className="textBig";
-g_overlay.innerText="Game Over";
-    setTimeout(()=>{g_overlay.classList.add("hide");clearAllFlash();},2500);
-    g_isFirstRound=true;g_seq=[];g_playerSeq=[];g_level=0;g_updateLevel();return;
+
+  let idx = g_playerSeq.length - 1;
+
+  // 答错：图片上显示 WRONG -50，不弹窗、不打断点击
+  if(g_playerSeq[idx] !== g_seq[idx]){
+    g_score -= 50;
+    g_updateScore();
+
+    // 直接在当前点击的图片上显示错误文字
+    const wrongBlock = g_images[c];
+    wrongBlock.classList.add("wrong");
+
+    // 只显示0.8秒，不影响后续点击
+    await sleep(800);
+    wrongBlock.classList.remove("wrong");
+
+    // 游戏继续，不重置
+    g_playerSeq = [];
+    g_canClick = false;
+    await sleep(1000);
+    playRound();
+    return;
   }
-  if(g_playerSeq.length===g_seq.length){
-    g_canClick=false;await sleep(1200);
-    g_overlay.classList.remove("hide");g_overlay.className="textMedium";
-    g_overlay.innerText="Good job";await sleep(2000);
-    g_overlay.innerText="Level "+(g_level+1);await sleep(2000);
+
+  // 答对整轮
+  if(g_playerSeq.length === g_seq.length){
+    g_score += 100;
+    g_updateScore();
+    g_canClick = false;
+
+    await sleep(1200);
+    g_overlay.classList.remove("hide");
+    g_overlay.className = "textMedium";
+    g_overlay.innerText = "Good job! +100";
+    await sleep(2000);
+
+    g_level++;
+    g_updateLevel();
+    if(g_level >= MAX_LEVEL){
+      g_overlay.innerText = "🎉 YOU WIN!\nScore: " + g_score;
+      await sleep(4000);
+      g_overlay.classList.add("hide");
+      g_isFirstRound = true;
+      g_seq = [];
+      g_playerSeq = [];
+      g_level = 0;
+      g_score = 0;
+      g_updateLevel();
+      g_updateScore();
+      return;
+    }
+
+    g_overlay.innerText = "Level " + g_level;
+    await sleep(2000);
     g_overlay.classList.add("hide");
-    g_level++;g_updateLevel();g_playerSeq=[];g_seq.push(randomColor());
-    await sleep(1200);playRound();
+
+    g_playerSeq = [];
+    g_seq.push(randomImage());
+    
+    await sleep(1200);
+    playRound();
   }
 }
 
-Object.keys(g_colors).forEach(k=>g_colors[k].onclick=()=>userPick(k));
-g_startBtn.onclick=async()=>{
-  clearAllFlash();g_seq=[];g_playerSeq=[];g_level=0;g_updateLevel();g_isFirstRound=true;
-  g_seq.push(randomColor());await sleep(600);playRound();
+Object.keys(g_images).forEach(k => {
+  g_images[k].onclick = () => userPick(k);
+});
+
+g_startBtn.onclick = async () => {
+  clearAllFlash();
+  g_seq = [];
+  g_playerSeq = [];
+  g_level = 0;
+  g_score = 0;
+  g_updateLevel();
+  g_updateScore();
+  g_isFirstRound = true;
+  g_seq.push(randomImage());
+  await sleep(600);
+  playRound();
 };
-g_backBtn.onclick=()=>window.location.href="index.html";
+
+document.getElementById('g_backBtn').onclick = () => {
+    window.location.href = "index.html";
+};
 </script>
 </body>
 </html>
