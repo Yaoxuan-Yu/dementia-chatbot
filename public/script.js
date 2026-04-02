@@ -85,9 +85,15 @@ function newChat() {
   refreshChatUI();
 
   
-   if (window.innerWidth <= 768) {
-    document.getElementById("sidebarToggle").click();
+  // Auto-close sidebar ONLY on mobile AND if it's OPEN
+if (window.innerWidth <= 768) {
+  const sidebar = document.getElementById("sidebar");
+  const toggle = document.getElementById("sidebarToggle");
+  // Only click if sidebar is NOT collapsed
+  if (sidebar && !sidebar.classList.contains("collapsed") && toggle) {
+    toggle.click();
   }
+}
 
 
   setTimeout(async () => {
