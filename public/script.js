@@ -78,7 +78,6 @@ function saveCurrentChat() {
 
 function newChat() {
   firstWelcomeReady = false;
-  document.getElementById("user-input").disabled = true; // 禁用输入框，直到欢迎消息加载完成
   console.log("newChat triggered"); // 原有日志保留
   saveCurrentChat();
   chatHistory = [];
@@ -91,7 +90,7 @@ function newChat() {
     console.log("setTimeout triggerWelcome called"); // 新增：确认延迟函数执行
     await triggerWelcome().catch(err => console.error("triggerWelcome in newChat error: ", err));
   }, 100);
-
+  document.getElementById("user-input").disabled = true; 
 }
 
 function loadChat(chatId) {
@@ -231,8 +230,6 @@ function removeTyping() {
 async function triggerWelcome() {
   const hiddenText = "Hi";
   try {
-    document.getElementById("user-input").disabled = true; 
-
     removeChips();
     addTyping();
 
@@ -445,7 +442,13 @@ function addChips(chips) {
     if (text && typeof text === "string") {
       const btn = document.createElement("button");
       btn.textContent = text;
-      btn.onclick = () => sendMessage(text);
+      btn.onclick = () => {
+        if (text.trim().toLowerCase() ==="test"){
+          window.location.href = "game.html";
+          return;
+        }
+        sendMessage(text);
+      }
       container.appendChild(btn);
     }
   });
