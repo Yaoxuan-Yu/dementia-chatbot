@@ -47,6 +47,33 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+function escapeHTML(str) {
+  return str.replace(/[&<>"']/g, function (m) {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#039;"
+    }[m];
+  });
+}
+
+function formatBotMessage(text) {
+  const safe = escapeHTML(text);
+
+  return safe
+        // bold + italic: ***text***
+    .replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>")
+    // bold: **text**
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      // convert bullet FIRST (before italic!)
+    .replace(/(^|\r?\n)[ \t]*\*\s+(.*)/g, '$1• $2')
+    // italic: *text* (safer version)
+    .replace(/(^|[\s(])\*(?!\s)(.+?)\*(?=[\s.,!?;:)]|$)/g, '$1<em>$2</em>')
+    .replace(/\n/g, "<br>");
+}
+
 function loadLastChat() {
   if (allChats.length > 0) {
     currentChatId = allChats[0].id;
@@ -393,7 +420,7 @@ function addMessage(text, sender, timestamp, richContent = null) {
     img.className = "avatar";
     const bubble = document.createElement("div");
     bubble.className = "bot-bubble";
-    bubble.innerHTML = text;
+    bubble.innerHTML = formatBotMessage(text);
     wrapper.appendChild(img);
     wrapper.appendChild(bubble);
     chatBox.appendChild(wrapper);

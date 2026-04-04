@@ -100,12 +100,12 @@ body {
   color: #888;
 }
 
-/* Bot layout */
 .bot-message-wrapper {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   margin: 6px 0;
+  overflow: visible !important;
 }
 
 .bot-bubble {
@@ -115,9 +115,13 @@ body {
   border-radius: 14px;
   max-width: 75%;
   white-space: pre-line;
-  line-height: 1.5;
+  line-height: 1.6;
   font-size: 15px;
+  position: relative;
+  margin: 8px 0;
+  overflow: visible !important;
 }
+
 
 /* Typing Animation */
 .typing {
