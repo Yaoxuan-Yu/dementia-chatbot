@@ -245,7 +245,7 @@ body {
   }
 
   .chat-box {
-    max-height: calc(100vh - 160px) !important;
+    max-height: calc(100vh - 130px) !important;
     padding-bottom: 20px !important;
   }
 
